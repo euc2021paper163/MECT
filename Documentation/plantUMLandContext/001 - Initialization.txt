@@ -1,0 +1,38 @@
+@startuml
+
+title __Runtime and Message Diagram of the SGX Connector__
+
+actor User
+participant Client
+
+box "Secure Enclaves (SGX protected)" #99FF99
+        participant ManagementEnc
+'        participant DataOutputEnc
+end box
+'        participant Server
+
+
+== Initialization ==
+'activate Server
+'activate IntelAttestationService
+
+User -> Client: Starts Application
+activate Client
+Client -> Client: Load ManagementEnc wrapper libraries\nand ManagementEnc object file
+/'note right
+		Object files are:
+		enclaveX.signed.so (Linux)
+		enclaveX.signed.dll (Windows)
+end note'/
+Client -> Client: Load wrapper libraries for DataOutputEnc
+note right
+		The wrapper functions must be
+		loaded in the beginning. 
+		But the object can be loaded later.
+end note
+Client -> ManagementEnc: Initizalizes ManagementEnc
+activate ManagementEnc
+ManagementEnc --> Client: Success
+Client --> User: Enclave waiting for\ntarget for session\nnegotiation
+
+@enduml

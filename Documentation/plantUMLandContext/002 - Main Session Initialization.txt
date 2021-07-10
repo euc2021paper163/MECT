@@ -1,0 +1,54 @@
+@startuml
+
+title __Runtime and Message Diagram of the SGX Connector__
+
+actor User
+participant Client
+
+box "Secure Enclaves (SGX protected)" #99FF99
+        participant ManagementEnc
+'        participant DataOutputEnc
+end box
+        participant Server
+
+
+
+activate Server
+activate ManagementEnc
+activate IntelAttestationService
+activate Client
+
+
+
+== Main Session Initialization ==
+
+User -> Client: Start connection\nto server
+Client -> ManagementEnc: Initialize sgx session\nand attestation report
+ManagementEnc -> ManagementEnc: Create DHEC Public key material\nand SGX session context
+ManagementEnc -> Client: Forward "Init SGX session"\nrequest to server
+Client -> Server: 
+Server -> Server: Create DHEC public\nkey material
+Server --> Client: SGX message 2
+Client --> ManagementEnc:
+ManagementEnc -> ManagementEnc: Create message 3
+ManagementEnc -> ManagementEnc: Save main session key material
+
+ManagementEnc -> Client: Send message 3 \n(Intel attestation report) \nEnclave-version
+Client -> Server:
+
+
+
+
+
+
+Server -> IntelAttestationService: Check report request
+alt 
+	IntelAttestationService --> Server:Report trustworthy
+	Server -> Server: Save main session \nkey material
+else
+	IntelAttestationService --> Server:Report invalid, abort!
+end
+	Server --> Client: Present result information about connection and attestation
+
+	Client --> User: Result
+@enduml

@@ -1,0 +1,60 @@
+@startuml
+
+title __Runtime and Message Diagram of the SGX Connector__
+
+actor User
+participant Client
+
+box "Secure Enclaves (SGX protected)" #99FF99
+        participant ManagementEnc
+        'participant DataOutputEnc
+end box
+participant Server
+
+activate Server
+activate ManagementEnc
+'activate IntelAttestationService
+activate Client
+ 
+== Requesting Data Stream ==
+
+activate Server
+'activate IntelAttestationService
+activate Client
+
+User -> Client: Pick data and operations
+Client -> ManagementEnc: Prepare request
+ManagementEnc -> ManagementEnc: Encrypt data request\nvia session's key
+ManagementEnc --> Client: Provide encrypted request
+Client -> Server:
+Server -> Server: Checks requested premissions\nand permissions of session's user
+note left
+		Encryption from enclave 
+		needed to prove origin 
+end note
+
+Server -> Server: Generates DataOutputEnc\ncode and definition on the fly
+
+alt Requested data and operations accepted
+	Server -> Client: Request to instantiate DataOutputEnc with: \n- DataOutputEnc definition\n- DataOutputEnc code 	
+else 
+	Server -> Client: Requested feature or data not allowed!
+end
+
+alt Manual check of code	
+	Client -> User: Show code to user
+	note right
+		Sometimes too complex to check
+		requires skilled user interaction
+	end note
+else Automatic check of code
+	Client -> Client: Check hash values and compare\nto trusted web database
+	note left
+		Not possible for very
+		generic, unknown code
+	end note
+else Trust data owner
+	Client -> Client: Check and trust signature of server
+end
+
+@enduml

@@ -1,0 +1,57 @@
+@startuml
+
+title __Runtime and Message Diagram of the SGX Connector__
+
+actor User
+participant Client
+
+box "Secure Enclaves (SGX protected)" #99FF99
+        participant ManagementEnc
+        participant DataOutputEnc
+end box
+        participant Server
+
+
+
+activate Server
+activate ManagementEnc
+activate IntelAttestationService
+activate Client
+
+
+== Preparing Data Stream  ==
+Client -> Client: Build and load DataOutputEnc
+Client -> DataOutputEnc: Initialize
+activate DataOutputEnc
+Client -> ManagementEnc: Initialize E2E session communication\nto DataOutputEnc and create report
+
+
+DataOutputEnc <-> ManagementEnc: Init enclave to enclave session
+DataOutputEnc --> ManagementEnc: Create attestation report
+ManagementEnc --> Client: Encrypted DataOutputEnc\nattestation report
+Client -> Server: send attestation report of initialized DataOutputEnc
+Server -> Server: Decrypts request
+Server -> IntelAttestationService: Sends report information
+alt 
+	IntelAttestationService --> Server: Attestation failure
+else 
+	IntelAttestationService --> Server: Attestation success
+end
+Server --> Client: Attestation approved / Otherwise abort!
+
+== Initializing Raw Data Transmission ==
+Server -> Client: Encrypted data using session's key
+Client -> ManagementEnc: Encrypted data
+ManagementEnc -> ManagementEnc: Decrypt data using session's key
+ManagementEnc -> ManagementEnc: Encrypt data for DataOutputEnc\nusing E2E session's key
+ManagementEnc -> DataOutputEnc: Sending encrypted data
+DataOutputEnc ->DataOutputEnc: Decrypt the data using\nE2E session's key
+Note left: Server's raw data protected despite location at possibly malicious client
+'DataOutputEnc -[#Green]> Client: Provide results of allowed\noperations of data owner
+loop 
+	Client <-[#Green]> User: Presentation\nand control
+	Note right: User can only perform operations permitted by data owner
+	Client <-[#Green]> DataOutputEnc: Operation Input and Output
+end
+
+@enduml

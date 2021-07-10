@@ -1,0 +1,40 @@
+@startuml
+
+title __Runtime and Message Diagram of the SGX Connector__
+
+actor User
+participant Client
+
+box "Secure Enclaves (SGX protected)" #99FF99
+        participant ManagementEnc
+'        participant DataOutputEnc
+
+end box
+        participant Server
+
+
+activate Server
+'activate IntelAttestationService
+activate Client
+
+== Handling Subscription ==
+
+activate Server
+'activate IntelAttestationService
+activate Client
+
+User -> Client: Provide user \ncredentials
+Client -> ManagementEnc: Sends credentials
+ManagementEnc -> ManagementEnc: Stores credentials
+ManagementEnc -> ManagementEnc: Encrypts credentials\nvia session's key 
+ManagementEnc -> Client: Return Encrypted Credentials
+Client -> Server: Send Encrypted Credentials
+Server -> Server: Decrypt using session's key
+Server -> Server: Check user's identity
+
+alt Credentials correct
+	Server -> Client: Ok user identified	
+else Credentials not found
+	Server -> Client: User unknown abort! Terminate session!
+end
+@enduml

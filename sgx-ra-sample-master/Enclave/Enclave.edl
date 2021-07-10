@@ -1,0 +1,128 @@
+/*
+
+Copyright 2018 Intel Corporation
+
+This software and the related documents are Intel copyrighted materials,
+and your use of them is governed by the express license under which they
+were provided to you (License). Unless the License provides otherwise,
+you may not use, modify, copy, publish, distribute, disclose or transmit
+this software or the related documents without Intel's prior written
+permission.
+
+This software and the related documents are provided as is, with no
+express or implied warranties, other than those that are expressly stated
+in the License.
+
+*/
+
+#ifndef _WIN32
+#include "config.h"
+#endif
+
+enclave {
+
+    include "sgx_eid.h"
+    include "datatypes.h"
+    include "dh_session_protocol.h"
+
+	include "sgx_trts.h"
+	include "sgx_utils.h"
+	include "sgx_tkey_exchange.h"
+
+	from "sgx_tkey_exchange.edl" import *;
+
+	trusted {
+#ifndef _WIN32
+		include "config.h"
+#endif
+
+		public sgx_status_t get_report([out] sgx_report_t *report,
+			[in] sgx_target_info_t *target_info);
+
+		public size_t get_pse_manifest_size();
+
+		public sgx_status_t get_pse_manifest([out, count=sz] char *buf, size_t sz);
+
+		public sgx_status_t enclave_ra_init(sgx_ec256_public_t key, int b_pse,
+			[out] sgx_ra_context_t *ctx, [out] sgx_status_t *pse_status);
+
+		public sgx_status_t enclave_ra_init_def(int b_pse,
+			[out] sgx_ra_context_t *ctx, [out] sgx_status_t *pse_status);
+
+		public sgx_status_t enclave_ra_get_key_hash(
+			[out] sgx_status_t *get_keys_status, sgx_ra_context_t ctx,
+			sgx_ra_key_type_t type, [out] sgx_sha256_hash_t *hash);
+
+		/* Added for prototype */
+		public sgx_status_t enclave_ra_get_key_saved(
+			[out] sgx_status_t *get_keys_status, sgx_ra_context_t ctx,
+			sgx_ra_key_type_t type);
+
+
+		/* ADded for prototype and taken from https://github.com/rodolfoams/sgx-aes-gcm/blob/master/CryptoEnclave/CryptoEnclave.edl */		
+
+		      /*
+        * This function decrypts a message.
+        * @param encMessageIn
+        *    the encrypted message containing MAC + IV + encrypted message.
+        * @param len
+        *    the length of the encMessageIn.
+        * @param decMessageOut
+        *    the destination of the decrypted message.
+        * @param lenOut
+        *    the length of the decMessageOut.
+        */
+        public void decryptMessage([in,size=len] char *encMessageIn, size_t len, [out,size=lenOut] char *decMessageOut, size_t lenOut);
+        
+
+
+        /*
+        * This function encrypts a message.
+        * @param decMessageIn
+        *    the original message
+        * @param len
+        *    the length of the decMessageIn.
+        * @param encMessageOut
+        *    the destination of the encrypted message containing MAC + IV + encrypted message.
+        * @param lenOut
+        *    the length of the encMessageOut.
+        */
+        public void encryptMessage([in,size=len] char *decMessageIn, size_t len, [out,size=lenOut] char *encMessageOut, size_t lenOut);
+
+
+
+		public sgx_status_t enclave_ra_close(sgx_ra_context_t ctx);
+
+		//e2e comm
+        public uint32_t test_create_session(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id);
+        public uint32_t test_message_exchange(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id);
+        public uint32_t test_enclave_to_enclave_call(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id);
+        public uint32_t copy_data_enclave_to_enclave_call(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id);
+
+        public uint32_t session_request(sgx_enclave_id_t src_enclave_id, [out] sgx_dh_msg1_t *dh_msg1, [out] uint32_t *session_id);
+        public uint32_t exchange_report(sgx_enclave_id_t src_enclave_id, [in] sgx_dh_msg2_t *dh_msg2, [out] sgx_dh_msg3_t *dh_msg3, uint32_t session_id);
+        public uint32_t generate_response(sgx_enclave_id_t src_enclave_id, [in, size = req_message_size] secure_message_t* req_message, size_t req_message_size, size_t max_payload_size, [out, size=resp_message_size] secure_message_t* resp_message, size_t resp_message_size );
+        public uint32_t end_session(sgx_enclave_id_t src_enclave_id);   
+
+        //prototype
+		public void takeSampleSets([string, in] char* id, [string, in] char* name, [string, in] char* sex, [string, in] char* choice, [string, in] char* rights);	
+		public int getNumberOfEntries();  
+		public int getNumberOfTrumpVotes();
+
+
+	};
+
+	untrusted {
+
+#ifndef _WIN32
+		include "config.h"
+#endif
+	    [cdecl] void emit_debug([string,in] const char *str);
+        uint32_t session_request_local_ocall(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id, [out] sgx_dh_msg1_t *dh_msg1,[out] uint32_t *session_id);
+        uint32_t exchange_report_local_ocall(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id, [in] sgx_dh_msg2_t *dh_msg2, [out] sgx_dh_msg3_t *dh_msg3, uint32_t session_id);
+        uint32_t send_request_local_ocall(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id, [in, size = req_message_size] secure_message_t* req_message, size_t req_message_size, size_t max_payload_size, [out, size=resp_message_size] secure_message_t* resp_message, size_t resp_message_size);
+        uint32_t end_session_local_ocall(sgx_enclave_id_t src_enclave_id, sgx_enclave_id_t dest_enclave_id);
+	};
+};
+
+
